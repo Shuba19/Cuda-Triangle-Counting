@@ -1,6 +1,6 @@
 PROGRAMNAME = Main
 CHATN = simple_triangle_counter
-LIB = ./FileReader/FileReader.cpp ./CUDA_Tri_v1/TriangleCounting.cu ./CUDA_Tri_v2/TriangleCounting.cu
+LIB = ./FileReader/FileReader.cpp ./CUDA_Tri_v3/TensorCalculation.cu
 T1 = test/t1.graph
 T2 = test/t2.graph
 T3 = test/t3.graph

@@ -84,6 +84,14 @@
         "expected": "cpp",
         "__locale": "cpp",
         "locale": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "csignal": "cpp",
+        "hash_map": "cpp",
+        "strstream": "cpp",
+        "barrier": "cpp",
+        "source_location": "cpp",
+        "future": "cpp",
+        "typeindex": "cpp",
+        "stdfloat": "cpp"
     }
 }

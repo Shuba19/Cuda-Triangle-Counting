@@ -33,25 +33,6 @@ __device__ bool bin_search_opt(int goal, int *v, int len)
     }
     return false;
 }
-__device__ int searchIndex(int pivot, int *v, int len)
-{
-    int l = 0;
-    int h = len - 1;
-    while (l <= h)
-    {
-        int mid = (l + h) / 2;
-        if (v[mid] < pivot)
-        {
-            l = mid + 1;
-        }
-        else if (v[mid] > pivot)
-        {
-            h = mid -1;
-        }
-    }
-    return 0;
-}
-
 
 __global__ void d_search_tri(int num_v, int *ofs, int *csr, int *results)
 {
@@ -74,7 +55,7 @@ __global__ void d_search_tri(int num_v, int *ofs, int *csr, int *results)
     }
 }
 
-int SearchTriangle(int num_v,int n_edges, std::vector<int>offsets, std::vector<int> csr, int n_blocks)
+int SearchTriangle(int num_v,int n_edges, std::vector<int>& offsets, std::vector<int>& csr, int n_blocks)
 {
     cudaSetDevice(0);
     dim3 blockDim(n_blocks);
@@ -98,6 +79,5 @@ int SearchTriangle(int num_v,int n_edges, std::vector<int>offsets, std::vector<i
     int n_tri = 0;
     for (auto i : results)
         n_tri += i;
-    std::cout << "number of tri :" << n_tri << std::endl;
     return n_tri;
 }
