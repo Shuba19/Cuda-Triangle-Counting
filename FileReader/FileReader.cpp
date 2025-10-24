@@ -1,7 +1,6 @@
 #include "FileReader.h"
 #include <algorithm>
 #include <fstream>
-#include <sstream>
 #include <iostream>
 
 MetisFR::MetisFR(const std::string fileName)

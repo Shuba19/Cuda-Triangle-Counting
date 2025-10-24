@@ -17,7 +17,6 @@ __global__ void tensorCoreCsrMatrix(int num_v, int *csr, int *offsets)
     if (id < num_v && id == 0)
     {
         half A[16 * 16];
-        int ofs = id;
         for (int i = 0; i < 16; i++)
         {
 
