@@ -43,15 +43,15 @@ __global__ void d_search_tri(int num_v, int *ofs, int *csr, int *results)
         int count = 0;
         for (int i = of1; i < of2; i++)
         {
-            if (csr[i] < id)
-                continue;
             int index = csr[i];
+            if (index  <= id)
+                continue;
             for (int j = ofs[index]; j < ofs[index + 1]; j++)
             {
                 int pivot = csr[j];
-                if (pivot < index)
+                if (pivot <= index)
                     continue;
-               count += bin_search_opt(id, &csr[ofs[pivot]], ofs[pivot+1] -ofs[pivot]) ? 1 : 0;
+               count += bin_search_opt(pivot, &csr[of1], of2-of1) ? 1 : 0;
             }
         }
         results[id] = count;

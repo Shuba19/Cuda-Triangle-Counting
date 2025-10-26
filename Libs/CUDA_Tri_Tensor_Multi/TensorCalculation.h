@@ -5,7 +5,8 @@
 #include <vector>
 #include <numeric>
 #include <stdio.h>
+#include <cassert>
 #include <mma.h>
 #include <cuda_fp16.h>
-int MatrixMulti(int num_v,int n_edges, std::vector<int>offsets, std::vector<int> csr, int n_blocks);
+int TTC(int num_v,int n_edges, std::vector<int>offsets, std::vector<int> csr);
 #endif

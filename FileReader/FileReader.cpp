@@ -3,17 +3,17 @@
 #include <fstream>
 #include <iostream>
 
-MetisFR::MetisFR(const std::string fileName)
+GraphFR::GraphFR(const std::string fileName)
 {
   this->fileName = fileName;
   ReadFile();
 }
 
-MetisFR::~MetisFR()
+GraphFR::~GraphFR()
 {
 }
 
-bool MetisFR::IsMetisComment(const std::string &str)
+bool GraphFR::IsMetisComment(const std::string &str)
 {
   for (char c : str)
   {
@@ -23,7 +23,7 @@ bool MetisFR::IsMetisComment(const std::string &str)
   return false;
 }
 
-bool MetisFR::UnweightedRead(std::ifstream &GraphInput)
+bool GraphFR::UnweightedRead(std::ifstream &GraphInput)
 {
   std::string line;
   int pos = 0;
@@ -53,24 +53,24 @@ bool MetisFR::UnweightedRead(std::ifstream &GraphInput)
   return true;
 }
 
-bool MetisFR::WeightedRead(std::ifstream &GraphInput)
+bool GraphFR::WeightedRead(std::ifstream &GraphInput)
 {
   return true;
 }
 
-bool MetisFR::MultiWeightRead(std::ifstream &GraphInput)
+bool GraphFR::MultiWeightRead(std::ifstream &GraphInput)
 {
   std::string line;
   int pos = 0;
   return true;
 }
 
-  bool MetisFR::ConstraintReadMW(std::ifstream & GraphInput, int n)
+  bool GraphFR::ConstraintReadMW(std::ifstream & GraphInput, int n)
   {
     return true;
   }
 
-  bool MetisFR::ReadFile()
+  bool GraphFR::ReadFile()
   {
     std::ifstream GraphInput(this->fileName);
     if (!GraphInput.is_open())

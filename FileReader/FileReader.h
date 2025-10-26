@@ -1,6 +1,6 @@
-#ifndef METISFILEREADER
+#ifndef GRAPHFILEREADER
 
-#define METISFILEREADER
+#define GRAPHFILEREADER
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -8,7 +8,7 @@
 #include <sstream>
 #include <list>
 #include <vector>
-class MetisFR{
+class GraphFR{
     std::list<int> args;
     int numArgs;
     std::string fileName;
@@ -20,8 +20,8 @@ class MetisFR{
     public:
     std::vector<int> csr, offsets;
     int num_v, num_edge;
-    MetisFR(const std::string fileName);
-    ~MetisFR();
+    GraphFR(const std::string fileName);
+    ~GraphFR();
     bool ReadFile();
     int **OutMatrix();
 };
