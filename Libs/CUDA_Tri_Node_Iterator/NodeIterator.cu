@@ -12,7 +12,7 @@
     }
 
 
-__device__ bool bin_search_opt(int goal, int *v, int len)
+__device__ bool static bin_search_opt(int goal, int *v, int len)
 {
     int l = 0;
     int h = len;
@@ -32,7 +32,7 @@ __device__ bool bin_search_opt(int goal, int *v, int len)
     return (l < len) && (v[l] == goal);
 }
 
-__global__ void d_search_tri(int num_v, int *ofs, int *csr, int *results)
+__global__ void static d_search_tri(int num_v, int *ofs, int *csr, int *results)
 {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     if (id < num_v)
@@ -45,7 +45,7 @@ __global__ void d_search_tri(int num_v, int *ofs, int *csr, int *results)
         {
             int index = csr[i];
             if (index  <= id)
-                continue;
+                continue;            
             for (int j = ofs[index]; j < ofs[index + 1]; j++)
             {
                 int pivot = csr[j];

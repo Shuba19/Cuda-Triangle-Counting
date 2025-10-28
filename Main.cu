@@ -2,10 +2,12 @@
 #include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
 #include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
 #include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
+#include "Libs/CUDA_Tri_BitWise_Operation/BitWiseCalculation.h"
 #define REPS 10
-#define V1 true
-#define V2 true
-#define V3 true
+#define V1 false
+#define V2 false
+#define V3 false
+#define V4 false
 int main(int argc, char *argv[])
 {
     GraphFR FR(argv[1]);
@@ -49,5 +51,19 @@ int main(int argc, char *argv[])
         elaps = elaps / REPS;
         std::cout << "Elapsed time: " << elaps << " ms with " << result << " triangles with TTC method." << std::endl;
     }
+    if (V4)
+    {
+        cudaEventRecord(t1);
+        for (int i = 0; i < REPS; i++)
+            result = BWC(FR.num_v, FR.num_edge, FR.offsets, FR.csr);
+        cudaEventRecord(t2);
+        cudaEventSynchronize(t2);
+        cudaEventElapsedTime(&elaps, t1, t2);
+        elaps = elaps / REPS;
+        std::cout << "Elapsed time: " << elaps << " ms with " << result << " triangles with Bitwise method." << std::endl;
+    }
+
+            result = TTC(FR.num_v, FR.num_edge, FR.offsets, FR.csr);
+        std::cout << "Elapsed time: " << 0 << " ms with " << result << " triangles with TTC method." << std::endl;
     return 0;
 }

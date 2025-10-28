@@ -11,7 +11,7 @@
         }                                                                   \
     }
 
-__device__ __forceinline__ int searchSourceNode(const int *arr, int n, int value)
+__device__ __forceinline__ static int searchSourceNode(const int *arr, int n, int value)
 {
     int low = 0, high = n;
     while (low < high)
@@ -25,7 +25,7 @@ __device__ __forceinline__ int searchSourceNode(const int *arr, int n, int value
     return low;
 }
 
-__global__ void edge_search_tri(int num_v, int num_e, int *ofs, int *csr, int *results)
+__global__ static void edge_search_tri(int num_v, int num_e, int *ofs, int *csr, int *results)
 {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     if (id < num_e)
