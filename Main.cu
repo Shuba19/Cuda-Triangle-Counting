@@ -6,7 +6,7 @@
 #define REPS 10
 #define V1 false
 #define V2 false
-#define V3 false
+#define V3 true
 #define V4 false
 int main(int argc, char *argv[])
 {
