@@ -63,7 +63,5 @@ int main(int argc, char *argv[])
         std::cout << "Elapsed time: " << elaps << " ms with " << result << " triangles with Bitwise method." << std::endl;
     }
 
-            result = TTC(FR.num_v, FR.num_edge, FR.offsets, FR.csr);
-        std::cout << "Elapsed time: " << 0 << " ms with " << result << " triangles with TTC method." << std::endl;
     return 0;
 }

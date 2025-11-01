@@ -11,7 +11,8 @@ using namespace nvcuda;
         }                                                                   \
     }
 
-struct tiles{
+struct tiles
+{
     u_int16_t tile[16];
 };
 
@@ -44,7 +45,7 @@ __global__ void wmma_example(half *a, half *b, float *c,
 __global__ __forceinline__ void static tiles_builder(int tpr, int num_v, int total_t, int *csr, int *ofs, tiles *matrix)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id < total_t )
+    if (id < total_t)
     {
         int col = floor((sqrt(8.0 * id + 1) - 1) / 2);
         int row = id - col * (col + 1) / 2;
@@ -100,54 +101,136 @@ __global__ __forceinline__ void static tiles_builder(int tpr, int num_v, int tot
         matrix[id] = t_res;
     }
 }
-
-__global__ void static tensorCoreCsrMatrix(int n_blocks, int num_v, int *csr, int *offsets, u_int16_t *matrix)
+/*
+__global__ void __forceinline__ static tensorCoreCsrMatrix(int tpr, int num_v, int total_t, tiles *matrix, float *acc)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id < n_blocks)
+    if (id < total_t)
     {
-        __shared__    wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> b_frag;
-        __shared__    wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::col_major> b_frag;
-        __shared__ wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
-        
+        wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
+        wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::col_major> b_frag;
+        wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
+        int col = floor((sqrt(8.0 * id + 1) - 1) / 2);
+        int row = id - col * (col + 1) / 2;
+        wmma::fill_fragment(c_frag, 0.0f);
+        tiles res_t = matrix[id];
+        int pos = 0;
+#pragma unroll
+        for (int i = 0; i < 16; i++)
+        {
+            u_int16_t v = res_t.tile[pos];
+#pragma unroll
+            for (int j = 0; j < 16; j++)
+            {
+                int val = ((v & 1));
+                a_frag.x[i * 16 + j] = __int2half_rd(val);
+                b_frag.x[j * 16 + i] = __int2half_rd(val);
+            }
+            pos++;
+        }
+        wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+        int tile_idx = id; // indice del tile / destinazione
+        int ne = c_frag.num_elements;
+        for (int e = 0; e < ne; ++e)
+        {
+            // atomicAdd su float in memoria globale
+            atomicAdd(&acc[tile_idx * ne + e], c_frag.x[e]);
+        }
+    }
+}
+
+__global__ __forceinline__ void hadamardProduct(int tpr, int num_v, int total_t, tiles *matrix, float *acc)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id < total_t)
+    {
+        tiles res_t = matrix[id];
+        float sum = 0;
+        int pos = 0;
+#pragma unroll
+        for (int i = 0; i < 16; i++)
+        {
+            u_int16_t v = res_t.tile[pos];
+            int index = id * 256 + 16 * i + 1;
+            sum += ((v << (16 - i)) & 1) * acc[index];
+            pos++;
+        }
+        printf("%f triangles \n", sum);
+    }
+}
+*/
+__global__ void countTriangle(int tpr, int num_v, int total_t, tiles *matrix, float *acc)
+{
+    int tile_id = blockIdx.x;
+    int row = threadIdx.y;
+    int col = threadIdx.x;
+    int tid = row * 16 + col;
+    __shared__ half A[16 * 16];
+    __shared__ half B[16 * 16];
+    __shared__ float C[16 * 16];
+    wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
+    for (int i = 0; i < tpr; i++)
+    {
+
+        tiles res_a = matrix[tile_id];
+        tiles res_b = matrix[tile_id];
+        u_int16_t rowbits = res_a.tile[row];
+
+        A[tid] = __int2half_ru((rowbits >> (15 - col)) & 1);
+        __syncthreads();
+        if (tid < 32)
+        {
+            wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
+            wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::col_major> b_frag;
+            wmma::load_matrix_sync(a_frag, A, 16);
+            wmma::load_matrix_sync(b_frag, A, 16);
+            wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
+        }
+        __syncthreads();
+    }
+    if (tid < 32)
+        wmma::store_matrix_sync(C, c_frag, 16, wmma::mem_row_major);
+    __syncthreads();
+    float cval = C[tid];
+    float aval = __half2float(A[tid]);
+    C[tid] = cval * aval;
+
+    __syncthreads();
+    if (threadIdx.x == 0 && threadIdx.y == 0)
+    {
+        float sum = 0.0f;
+        for (int i = 0; i < 16; i++)
+        {
+            for (int j = 0; j < 16; j++)
+            {
+                float val = C[i * 16 + j];
+                sum += val;
+            }
+        }
+        acc[blockIdx.x] = sum;
     }
 }
 
 int TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
 {
-    /*/flow chart :
-        in order  to save space, we have to convert CSR to tiles struct, probably a struct like
-        {
-            size_t[16*16];  fixed 16*16
-            int c,r; /column and row
-        }
-        can't allocate all in once, due to poor resource,
-        need to allocate first tpr column as A(i) and tpr row as B(j) , i,j E [0,tpr-1]
-        calculate them Σ A_i * B_j, and repeat for all the matrix in order to calculate C_n tiles, with n E [0, n_tiles -1]
-        after, need to decide to apply C hadamard_op A, sum and divide by 6, in order to obtain all the triangles or classical A³
-     */
+
     cudaSetDevice(0);
     int n_tri = 0;
-    int n_blocks = 256;
     int tiles_per_row = ((num_v + 15) >> 4);
     int64_t total_tiles = tiles_per_row * (tiles_per_row + 1) >> 1;
-    dim3 blockDim(n_blocks);
-    dim3 gridDim((tiles_per_row + n_blocks - 1) / n_blocks);
     n_edges = n_edges << 1;
     int padded_size_csr = ((n_edges + 15) >> 4) << 4;
     int *d_csr, *d_ofs, *d_res;
-    u_int16_t *d_square;
     tiles *d_tiles;
     d_csr = nullptr;
     d_ofs = nullptr;
     d_res = nullptr;
-    d_square = nullptr;
     CHECK(cudaMalloc(&d_csr, (padded_size_csr) * sizeof(int)));
     CHECK(cudaMalloc(&d_ofs, (num_v + 1) * sizeof(int)));
     // tiles_shifted is total_tiles<< 4, because eachtiles contains at most 16 uint_16, so 16² values are stored per thread
     int tiles_shifted = total_tiles;
     CHECK(cudaMalloc(&d_tiles, (tiles_shifted) * sizeof(tiles)));
-    //CHECK(cudaMalloc(&d_square, (tiles_shifted) * sizeof(tiles)));
+    // CHECK(cudaMalloc(&d_square, (tiles_shifted) * sizeof(tiles)));
     CHECK(cudaMemcpyAsync(d_csr, csr.data(), n_edges * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpyAsync(d_ofs, offsets.data(), (num_v + 1) * sizeof(int), cudaMemcpyHostToDevice));
 
@@ -156,7 +239,19 @@ int TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
     cudaDeviceSynchronize();
     cudaFree(d_csr);
     cudaFree(d_ofs);
+
+    dim3 blocks_dimension(16, 16);
+    dim3 grid_dimension(total_tiles);
+    float *d_acc;
+    CHECK(cudaMalloc(&d_acc, total_tiles * sizeof(float)));
+
+    countTriangle<<<total_tiles, blocks_dimension>>>(tiles_per_row, num_v, total_tiles, d_tiles, d_acc);
+    std::vector<float> res(total_tiles);
+    cudaDeviceSynchronize();
+    cudaMemcpy(res.data(), d_acc, total_tiles * sizeof(float), cudaMemcpyDeviceToHost);
     cudaFree(d_tiles);
-    cudaFree(d_square);
-    return total_tiles;
+    cudaFree(d_acc);
+    for (auto i : res)
+        n_tri += (int)i;
+    return n_tri / 6;
 }
