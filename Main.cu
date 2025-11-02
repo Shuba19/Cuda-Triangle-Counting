@@ -3,9 +3,9 @@
 #include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
 #include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
 #include "Libs/CUDA_Tri_BitWise_Operation/BitWiseCalculation.h"
-#define REPS 10
-#define V1 false
-#define V2 false
+#define REPS 1
+#define V1 true
+#define V2 true
 #define V3 true
 #define V4 false
 int main(int argc, char *argv[])
@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     GraphFR FR(argv[1]);
     std::cout << "Reading Graph :" << argv[1] << "  with a density of:" << float(FR.num_edge / FR.num_v) << std::endl;
     SearchTriangle_Edge(FR.num_v, FR.num_edge, FR.offsets, FR.csr, 128);
-    int result;
+    int64_t result;
     cudaEvent_t t1, t2;
     cudaEventCreate(&t1);
     cudaEventCreate(&t2);
