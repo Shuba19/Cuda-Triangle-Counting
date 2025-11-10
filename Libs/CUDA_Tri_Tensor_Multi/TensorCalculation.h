@@ -5,8 +5,9 @@
 #include <vector>
 #include <numeric>
 #include <stdio.h>
-#include <cassert>
+#include <algorithm> 
+#include <cmath>     
 #include <mma.h>
 #include <cuda_fp16.h>
-int TTC(int num_v,int n_edges, std::vector<int>offsets, std::vector<int> csr);
+int64_t TTC(int num_v,int n_edges, std::vector<int>offsets, std::vector<int> csr);
 #endif

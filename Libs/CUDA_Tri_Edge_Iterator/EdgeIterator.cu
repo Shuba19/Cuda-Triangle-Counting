@@ -11,7 +11,7 @@
         }                                                                   \
     }
 
-__device__ __forceinline__ static int searchSourceNode(const int *arr, int n, int value)
+__device__ __forceinline__ int searchSourceNode(const int *arr, int n, int value)
 {
     int low = 0, high = n;
     while (low < high)
@@ -25,7 +25,7 @@ __device__ __forceinline__ static int searchSourceNode(const int *arr, int n, in
     return low;
 }
 
-__global__ static void edge_search_tri(int num_v, int num_e, int *ofs, int *csr, int *results)
+__global__ void edge_search_tri(int num_v, int num_e, int *ofs, int *csr, int *results)
 {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     if (id < num_e)
@@ -45,7 +45,7 @@ __global__ static void edge_search_tri(int num_v, int num_e, int *ofs, int *csr,
             int c1 = csr[s1], c2 = csr[s2];
             if (c1 == c2)
             {
-                if (c1 > d_node) // Enforce strict ordering s_node < d_node < c1
+                if (c1 > d_node)
                 {
                     n_tri++;
                 }
@@ -61,35 +61,100 @@ __global__ static void edge_search_tri(int num_v, int num_e, int *ofs, int *csr,
         return;
     }
 }
+__global__ void edge_search_tri_directed(int num_v, int num_e, int *ofs, int *csr, int *results)
+{
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    if (id >= num_e)
+        return;
 
+    int n_tri = 0;
 
-int SearchTriangle_Edge(int num_v, int n_edges, std::vector<int> &offsets, std::vector<int> &csr, int n_th)
+    int s_node = searchSourceNode(ofs, num_v, id) - 1;
+    int d_node = csr[id];
+
+    int s1 = ofs[s_node];
+    int e1 = ofs[s_node + 1];
+    int s2 = ofs[d_node];
+    int e2 = ofs[d_node + 1];
+
+    while (s1 < e1 && s2 < e2)
+    {
+        int c1 = csr[s1];
+        int c2 = csr[s2];
+
+        if (c1 == c2)
+        {
+            if (c1 > d_node)
+                n_tri++;
+            s1++;
+            s2++;
+        }
+        else if (c1 < c2)
+        {
+            s1++;
+        }
+        else
+        {
+            s2++;
+        }
+    }
+    results[id] = n_tri;
+}
+
+__global__ void sum_results(int num_e, int *d_res, int *d_sum)
+{
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = threadIdx.x;
+    extern __shared__ int s_data[];
+
+    // carica (0 se oltre la lunghezza)
+    if (id < num_e)
+        s_data[tid] = d_res[id];
+    else
+        s_data[tid] = 0;
+    __syncthreads();
+
+    for (int stride = blockDim.x >> 1; stride > 0; stride >>= 1)
+    {
+        if (tid < stride)
+            s_data[tid] += s_data[tid + stride];
+        __syncthreads();
+    }
+    if (tid == 0)
+        atomicAdd(d_sum, s_data[0]);
+}
+int64_t SearchTriangle_Edge(int num_v, int n_edges, std::vector<int> &offsets, std::vector<int> &csr, bool undirected)
 {
     cudaSetDevice(0);
     n_edges = n_edges << 1;
-    int *d_csr, *d_ofs, *d_res;
+    int *d_csr, *d_ofs, *d_res, *d_sum;
     d_csr = nullptr;
     d_ofs = nullptr;
     d_res = nullptr;
-
-    int n_blocks = (n_edges + (n_th)-1) / (n_th);
+    int n_blocks = (n_edges + 127) / (128);
     CHECK(cudaMalloc(&d_ofs, (offsets.size()) * sizeof(int)));
     CHECK(cudaMalloc(&d_csr, n_edges * sizeof(int)));
-    CHECK(cudaMalloc(&d_res, n_edges * sizeof(int))); // Fix: removed +1
+    CHECK(cudaMalloc(&d_res, n_edges * sizeof(int)));
+    CHECK(cudaMalloc(&d_sum, num_v * sizeof(int)));
     CHECK(cudaMemcpy(d_ofs, offsets.data(), (num_v + 1) * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_csr, csr.data(), (n_edges) * sizeof(int), cudaMemcpyHostToDevice));
-
-    dim3 blockDim(n_th);
+    dim3 blockDim(128);
     dim3 gridDim(n_blocks);
-    edge_search_tri<<<gridDim, blockDim>>>(num_v, n_edges, d_ofs, d_csr, d_res);
+    if (undirected)
+        edge_search_tri<<<gridDim, blockDim>>>(num_v, n_edges, d_ofs, d_csr, d_res);
+    else
+        edge_search_tri_directed<<<gridDim, blockDim>>>(num_v, n_edges, d_ofs, d_csr, d_res);
     cudaDeviceSynchronize();
-    std::vector<int> results(n_edges);                                                       // Fix: changed from num_v to n_edges
-    CHECK(cudaMemcpy(results.data(), d_res, n_edges * sizeof(int), cudaMemcpyDeviceToHost)); // Fix: changed size
+    sum_results<<<gridDim, blockDim, blockDim.x * sizeof(int)>>>(num_v, d_res, d_sum);
+    cudaDeviceSynchronize();
+    int tri_count = 0;
+    CHECK(cudaMemcpy(&tri_count, d_sum, sizeof(int), cudaMemcpyDeviceToHost));
     cudaFree(d_res);
     cudaFree(d_csr);
     cudaFree(d_ofs);
-    int n_tri = 0;
-    for (auto i : results)
-        n_tri += i;
+    int64_t n_tri = tri_count;
+    cudaFree(d_sum);
+    if (!undirected)
+        n_tri /= 3;
     return n_tri;
 }

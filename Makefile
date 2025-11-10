@@ -1,10 +1,11 @@
-PROGRAMNAME = out.o
+PROGRAMNAME = out
 SOURCE = Main.cu
 LIB1 = ./Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.cu
 LIB2 = ./Libs/CUDA_Tri_Node_Iterator/NodeIterator.cu
 LIB3 = ./Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.cu
-LIB4 = ./Libs/CUDA_Tri_BitWise_Operation/BitWiseCalculation.cu
-FILER = ./FileReader/FileReader.cpp 
+LIB4 = ./Libs/CUDA_BitWise/BW_triangle.cu
+LIB5 = ./Libs/CUDA_Hybrid_Operation/CUDA_Hybrid_Operation.cu
+FILER = ./FileReader/FileReader.cpp ./FileReader/command_args.cpp
 SAMPLE = test/sample.graph
 T1 = test/t1.graph
 T2 = test/t2.graph
@@ -24,8 +25,8 @@ GPU_ARCH ?= sm_89
 all: $(PROGRAMNAME)
 
 
-$(PROGRAMNAME): $(SOURCE) $(LIB1) $(LIB2) $(LIB3) $(LIB4) $(FILER)
-	nvcc -O2 -std=c++17 -arch=$(GPU_ARCH) -rdc=true  -o $(PROGRAMNAME) $(SOURCE) $(LIB1) $(LIB2) $(LIB3) $(LIB4) $(FILER)
+$(PROGRAMNAME): $(SOURCE) $(LIB1) $(LIB2) $(LIB3) $(LIB4) $(LIB5)  $(FILER)
+	nvcc -g -G -O2 -std=c++17 -arch=$(GPU_ARCH) -rdc=true  -o $(PROGRAMNAME) $(SOURCE) $(LIB1) $(LIB2) $(LIB3) $(LIB4) $(LIB5) $(FILER)
 
 
 

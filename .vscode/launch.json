@@ -1,51 +1,11 @@
 {
   "configurations": [
-    {
-      "type": "cppdbg",
-      "request": "launch",
-      "name": "Debug CUDA Triangle Project",
-      "program": "${workspaceFolder}/out.o",
-      "args": ["test/customMatrix.graph"],
-      "cwd": "${workspaceFolder}",
-      "MIMode": "gdb",
-      "miDebuggerPath": "/usr/local/cuda/bin/cuda-gdb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        },
-        {
-          "description": "Enable CUDA debugging",
-          "text": "set cuda memcheck on",
-          "ignoreFailures": true
-        }
-      ],
-      "preLaunchTask": "build",
-      "stopAtEntry": false,
-      "environment": [
-        {
-          "name": "CUDA_VISIBLE_DEVICES",
-          "value": "0"
-        }
-      ]
-    }
-  ],
-  "inputs": [
-    {
-      "type": "pickString",
-      "id": "graphFile",
-      "description": "Select graph file to debug with",
-      "options": [
-        "test/sample.graph",
-        "test/t1.graph",
-        "test/t2.graph",
-        "test/t3.graph",
-        "test/t4.graph",
-        "test/t5.graph",
-        "test/t6.graph",
-        "test/customMatrix.graph"
-      ]
-    }
+  {
+    "name": "CUDA C++: Launch",
+    "type": "cuda-gdb",
+    "request": "launch",
+    "program": "${workspaceFolder}/out",
+    "args": ["${workspaceFolder}/test/matrix6.graph"]
+  }
   ]
 }

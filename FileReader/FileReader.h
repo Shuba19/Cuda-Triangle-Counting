@@ -6,16 +6,11 @@
 #include <fstream>
 #include <sys/mman.h>
 #include <sstream>
-#include <list>
 #include <vector>
 class GraphFR{
-    std::list<int> args;
     int numArgs;
     std::string fileName;
-    bool UnweightedRead(std::ifstream& GraphInput);
-    bool WeightedRead(std::ifstream& GraphInput);
-    bool MultiWeightRead(std::ifstream& GraphInput);
-    bool ConstraintReadMW(std::ifstream& GraphInput, int n);
+    bool GraphReader(std::ifstream& GraphInput, bool e_weight, bool v_weight, int n_skip);
     bool IsMetisComment(const std::string& str);
     public:
     std::vector<int> csr, offsets;

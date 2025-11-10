@@ -1,4 +1,7 @@
 #include "TensorCalculation.h"
+#include <algorithm> // <<< FIX: Needed for std::max and std::min (or use CUDA's max/min)
+#include <cmath>     // <<< FIX: Included for sqrt/floor, though likely in your .h
+
 using namespace nvcuda;
 #define CHECK(call)                                                         \
     {                                                                       \
@@ -35,35 +38,36 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
         int s_y = row * 16;
         int pos = 0;
         tiles t_res;
-        for (int ii = 0; ii < 16; ++ii)
+        #pragma unroll
+        for (int i = 0; i < 16; ++i)
         {
-            int i = s_y + ii; // riga globale
+            int y = s_y + i; 
             u_int16_t c = 0x0;
-            if (i >= num_v)
+            if (y >= num_v)
             {
-                // riga fuori dal grafo: mantieni c = 0 (tutti i bit a 0)
                 t_res.tile[pos++] = c;
                 continue;
             }
-            int of1 = ofs[i];
-            int of2 = ofs[i + 1];
-            for (int jj = 0; jj < 16; ++jj)
+            int of1 = ofs[y];
+            int of2 = ofs[y + 1];
+            #pragma unroll
+            for (int j = 0; j < 16; ++j)
             {
-                int j = s_x + jj; // colonna globale
+                int x = s_x + j;
                 int t_s = 0;
-                if (j < num_v)
+                if (x < num_v)
                 {
                     int low = of1;
                     int high = of2 - 1;
                     while (low <= high)
                     {
                         int mid = low + ((high - low) >> 1);
-                        if (csr[mid] == j)
+                        if (csr[mid] == x)
                         {
                             t_s = 1;
                             break;
                         }
-                        else if (csr[mid] < j)
+                        else if (csr[mid] < x)
                         {
                             low = mid + 1;
                         }
@@ -83,7 +87,6 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
 
 __global__ void countTriangle(int tpr, tiles *matrix, double *square)
 {
-
     int tile_id = blockIdx.x;
     int row = threadIdx.y;
     int col = threadIdx.x;
@@ -100,11 +103,16 @@ __global__ void countTriangle(int tpr, tiles *matrix, double *square)
     C[tid] = 0.0;
     temp_C[tid] = 0.0f;
     __syncthreads();
-
+    #pragma unroll
     for (int k_tile = 0; k_tile < tpr; k_tile++)
     {
-        int id1 = t_row * (t_row + 1) / 2 + k_tile;
-        int id2 = k_tile * (k_tile + 1) / 2 + t_col;
+        int r1 = max(t_col, k_tile);
+        int c1 = min(t_col, k_tile);
+        int id1 = r1 * (r1 + 1) / 2 + c1;
+
+        int r2 = max(k_tile, t_row);
+        int c2 = min(k_tile, t_row);
+        int id2 = r2 * (r2 + 1) / 2 + c2;
 
         u_int16_t a_row = matrix[id1].tile[row];
         u_int16_t b_row = matrix[id2].tile[row];
@@ -134,35 +142,42 @@ __global__ void countTriangle(int tpr, tiles *matrix, double *square)
 }
 
 
-__global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag)
+__global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, int num_v) 
 {
-
     int tile_id = blockIdx.x;
     int row = threadIdx.y;
     int col = threadIdx.x;
     int tid = row * 16 + col;
 
-    __shared__ half A[256];
-    __shared__ half B[256];
-    __shared__ double C[256];
+    __shared__ half A[256]; 
+    __shared__ half B[256]; 
+    __shared__ double C[256]; 
     __shared__ float temp_C[256];
 
     int t_col = triangular_col_from_id(tile_id);
     int t_row = tile_id - t_col * (t_col + 1) / 2;
 
-    int64_t tile_offset = (int64_t)tile_id * 256 + tid;
     C[tid] = 0.0;
     temp_C[tid] = 0.0f;
     __syncthreads();
-
+    #pragma unroll
     for (int k_tile = 0; k_tile < tpr; k_tile++)
     {
-        int id1 = t_row * (t_row + 1) / 2 + k_tile;
-        int id2 = k_tile * (k_tile + 1) / 2 + t_col;
-        double a = square[tile_offset];
-        u_int16_t b_row = matrix[id2].tile[row];
+        int r1 = max(t_col, k_tile);
+        int c1 = min(t_col, k_tile);
+        int id1 = r1 * (r1 + 1) / 2 + c1;
+
+        int r2 = max(k_tile, t_row);
+        int c2 = min(k_tile, t_row);
+        int id2 = r2 * (r2 + 1) / 2 + c2;
+
+       
+        double a = square[(int64_t)id1 * 256 + tid];
+        u_int16_t b_row_val = matrix[id2].tile[row];
+
         A[tid] = __double2half(a);
-        B[tid] = __int2half_ru((b_row >> (15 - col)) & 1);
+        B[tid] = __int2half_ru((b_row_val >> (15 - col)) & 1);
+        
         __syncthreads();
         if (tid < 32)
         {
@@ -180,33 +195,36 @@ __global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag)
         C[tid] += (double)temp_C[tid];
         __syncthreads();
     }
-    if(threadIdx.x == 0 && threadIdx.y == 0)
+  
+    if (t_col == t_row)
     {
-        for(int i = 0; i < 16; i++)
+        if(row == col)
         {
-            int p = blockDim.x*16 + i;
-            diag[p] = C[i*16 +i];
+            int global_diag_idx = t_col * 16 + row; 
+            
+            if (global_diag_idx < num_v) 
+            {
+                diag[global_diag_idx] = (int)C[tid];
+            }
         }
     }
 }
 
-int TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
+int64_t TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
 {
 
     cudaSetDevice(0);
-    int n_tri = 0;
     int tiles_per_row = ((num_v + 15) >> 4);
     int64_t total_tiles = tiles_per_row * (tiles_per_row + 1) >> 1;
     n_edges = n_edges << 1;
     int padded_size_csr = ((n_edges + 15) >> 4) << 4;
-    int *d_csr, *d_ofs, *d_res;
+    int *d_csr, *d_ofs;
     tiles *d_tiles;
     d_csr = nullptr;
     d_ofs = nullptr;
-    d_res = nullptr;
     CHECK(cudaMalloc(&d_csr, (padded_size_csr) * sizeof(int)));
     CHECK(cudaMalloc(&d_ofs, (num_v + 1) * sizeof(int)));
-    // tiles_shifted is total_tiles<< 4, because eachtiles contains at most 16 uint_16, so 16² values are stored per thread
+
     int tiles_shifted = total_tiles;
     CHECK(cudaMalloc(&d_tiles, (tiles_shifted) * sizeof(tiles)));
     CHECK(cudaMemcpyAsync(d_csr, csr.data(), n_edges * sizeof(int), cudaMemcpyHostToDevice));
@@ -224,20 +242,27 @@ int TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
     dim3 grid_dimension(total_tiles);
     int *d_diag;
     CHECK(cudaMalloc(&d_diag, num_v * sizeof(int)));
+    CHECK(cudaMemset(d_diag, 0, num_v * sizeof(int))); 
 
     CHECK(cudaGetLastError());
     countTriangle<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square);
     cudaDeviceSynchronize();
-    cubeMatrix<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square, d_diag);
+    
+    cubeMatrix<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square, d_diag, num_v);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError());
+    
     std::vector<int>res(num_v);
-    cudaMemcpy(res.data(), d_diag, total_tiles * sizeof(int), cudaMemcpyDeviceToHost);
+    
+    cudaMemcpy(res.data(), d_diag, num_v * sizeof(int), cudaMemcpyDeviceToHost);
+    
     cudaFree(d_tiles);
     cudaFree(d_diag);
     cudaFree(d_square);
-    int num = 0;
+    
+    int64_t num = 0;
     for (auto i : res)
-        num += (int)(i);
+        num += (int64_t)(i);
+        
     return num / 6;
 }
