@@ -1,24 +1,40 @@
 #ifndef GRAPHFILEREADER
-
 #define GRAPHFILEREADER
+#include "command_args.h"
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <sys/mman.h>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
+#include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
+#include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
+
+
+struct timerEvent{
+    cudaEvent_t t1,t2;
+    float time;
+};
+
 class GraphFR{
+    int num_v, num_edge;
+    std::vector<int> csr, offsets;
     int numArgs;
+    CommandArgs args;
     std::string fileName;
+    timerEvent timer;
+    void StartTimer();
+    void StopTimer();
     bool GraphReader(std::ifstream& GraphInput, bool e_weight, bool v_weight, int n_skip);
     bool IsMetisComment(const std::string& str);
+
     public:
-    std::vector<int> csr, offsets;
-    int num_v, num_edge;
-    GraphFR(const std::string fileName);
+    GraphFR(const CommandArgs& args);
     ~GraphFR();
     bool ReadFile();
-    int **OutMatrix();
+    int CalculateTriangles();
 };
 
 #endif

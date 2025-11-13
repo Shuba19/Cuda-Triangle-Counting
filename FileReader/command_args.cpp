@@ -1,17 +1,48 @@
 #include "command_args.h"
 
+void print_help_message()
+{
+    std::cout << "Usage: app -i <input_file> [options]\n"
+              << "Options:\n"
+              << "  -i <input_file>   Specify the input file\n"
+              << "  -d                Use directed graph (default is undirected)\n"
+              << "  -b                Enable benchmarking mode\n"
+              << "  -h, -help        Display this help message\n"
+              << "  -t                Enable timer\n"
+              << "  -mode             Set the mode ()\n"
+              << "  -v          Enable verbose output\n"
+              << std::endl;
+}
+
+
 CommandArgs parse_command_args(int argc, char** argv)
 {
     CommandArgs args;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--i" && i + 1 < argc) {
+        if (arg == "-i" && i + 1 < argc) {
             args.input_file = argv[++i];   
-        } else if (arg == "--d") {
+        } else if (arg == "-d") {
             args.undirect = false; 
         }
-        else if (arg == "--b") {
+        else if (arg == "-b") {
             args.benchmark = true; 
+        }
+        else if (arg == "-h" || arg == "-help") {
+            args.help = true; 
+        }
+        else if (arg == "-t") {
+            args.timer = true; 
+        }
+        else if (arg == "-mode") {
+            args.mode_set = true; 
+            args.mode = argv[++i];
+        }
+        else if (arg == "-v") {
+            args.verbose = true; 
+        }
+        else {
+            args.valid = false; 
         }
     }
     return args;

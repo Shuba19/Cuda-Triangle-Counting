@@ -1,7 +1,4 @@
 #include "FileReader.h"
-#include <algorithm>
-#include <fstream>
-#include <iostream>
 
 /*********************************
  * Metis Graph first line parameters:
@@ -16,9 +13,10 @@ GraphFR::~GraphFR()
 {
 }
 
-GraphFR::GraphFR(const std::string fileName) : fileName(fileName), num_v(0), num_edge(0)
+GraphFR::GraphFR(const CommandArgs &args) : fileName(fileName), num_v(0), num_edge(0)
 {
-  GraphFR::ReadFile();
+  cudaEventCreate(&this->timer.t1);
+  cudaEventCreate(&this->timer.t2);
 }
 
 bool GraphFR::IsMetisComment(const std::string &str)
@@ -46,16 +44,15 @@ bool GraphFR::GraphReader(std::ifstream &GraphInput, bool e_weight, bool v_weigh
     if (v_weight)
     {
       iss >> garbage;
-      for (int i = 1; i< n_skip; i++)
-        iss>> garbage;
+      for (int i = 1; i < n_skip; i++)
+        iss >> garbage;
     }
-
     int edge;
     std::vector<int> v_edge;
     while (iss >> edge)
     {
       v_edge.push_back(edge - 1);
-      if(e_weight)
+      if (e_weight)
         iss >> garbage;
     }
     std::sort(v_edge.begin(), v_edge.end());
@@ -73,7 +70,7 @@ bool GraphFR::GraphReader(std::ifstream &GraphInput, bool e_weight, bool v_weigh
 
 bool GraphFR::ReadFile()
 {
-  std::ifstream GraphInput(this->fileName);
+  std::ifstream GraphInput(this->args.input_file);
   if (!GraphInput.is_open())
   {
     std::cerr << "Error Opening File, check if the file exists or/and if the name is correct." << std::endl;
@@ -107,4 +104,44 @@ bool GraphFR::ReadFile()
   bool result = GraphReader(GraphInput, e_w, v_w, args[3]);
   GraphInput.close();
   return result;
+}
+
+void GraphFR::StartTimer()
+{
+  cudaEventRecord(this->timer.t1, 0);
+}
+void GraphFR::StopTimer()
+{
+  cudaEventRecord(this->timer.t2, 0);
+  cudaEventSynchronize(this->timer.t2);
+  cudaEventElapsedTime(&this->timer.time, this->timer.t1, this->timer.t2);
+}
+
+int GraphFR::CalculateTriangles()
+{
+  int triangle_count = 0;
+  switch (this->args.mode[0])
+  {
+    case 'n':
+    {
+      SearchTriangle(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+      break;
+    }
+    case 'e':
+    {
+      SearchTriangle_Edge(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+      break;
+    }
+    case 't':
+    {
+      TTC(this->num_v, this->num_edge, this->offsets, this->csr);
+      break;
+    }
+    default:
+      std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
+      return -1;
+  }
+  StartTimer();
+  StopTimer();
+  return triangle_count;
 }

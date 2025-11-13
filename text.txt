@@ -1,0 +1,7 @@
+ncu --metrics  -- ./out -i test/t1.graph  
+Reading Graph :test/t1.graph
+==PROF== Connected to process 14090 (/home/shuba/Documents/CUDA_Project/out)
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0. For instructions on enabling permissions and to get more information see https://developer.nvidia.com/ERR_NVGPUCTRPERM
+Graph read with 268495 vertices and 1156647 edges in 25.5277 ms.
+Initial triangle count with Edge Iterator: 290610
+==PROF== Disconnected from process 14090

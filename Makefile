@@ -1,11 +1,11 @@
 PROGRAMNAME = out
 SOURCE = Main.cu
-LIB1 = ./Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.cu
-LIB2 = ./Libs/CUDA_Tri_Node_Iterator/NodeIterator.cu
-LIB3 = ./Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.cu
-LIB4 = ./Libs/CUDA_BitWise/BW_triangle.cu
-LIB5 = ./Libs/CUDA_Hybrid_Operation/CUDA_Hybrid_Operation.cu
-FILER = ./FileReader/FileReader.cpp ./FileReader/command_args.cpp
+LIB1 = ./FileReader/Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.cu
+LIB2 = ./FileReader/Libs/CUDA_Tri_Node_Iterator/NodeIterator.cu
+LIB3 = ./FileReader/Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.cu
+LIB4 = ./FileReader/Libs/CUDA_BitWise/BW_triangle.cu
+LIB5 = ./FileReader/Libs/CUDA_Hybrid_Operation/CUDA_Hybrid_Operation.cu
+FILER = ./FileReader/FileReader.cu ./FileReader/command_args.cpp
 SAMPLE = test/sample.graph
 T1 = test/t1.graph
 T2 = test/t2.graph
@@ -49,7 +49,7 @@ run_python :$(PROGRAMNAME)
 	$(PYTHON) $(T4)
 	$(PYTHON) $(T5)
 	$(PYTHON) $(T6)
-
+	
 clean:
 	rm -f $(PROGRAMNAME) $(CUBLAS_PROG)
 
