@@ -1,0 +1,10 @@
+----------------------------------
+Graph Information:
+Number of vertices: 32
+Number of edges: 68
+Graph Density: 13.7097%
+CSR Size: 126
+Offsets Size: 33
+Mode: 0
+Time taken for last operation: 2.67661 ms
+----------------------------------

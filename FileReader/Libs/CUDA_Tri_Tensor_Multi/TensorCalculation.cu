@@ -14,20 +14,8 @@ using namespace nvcuda;
         }                                                                   \
     }
 
-struct tiles
-{
-    u_int16_t tile[16];
-};
-
-__device__ int triangular_col_from_id(int id)
-{
-    int col = 0;
-    while ((col * (col + 1)) / 2 <= id)
-        ++col;
-    return col - 1;
-}
-
-__global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *ofs, tiles *matrix)
+/**/
+__global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *ofs, tiles_b *matrix)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id < total_t)
@@ -37,11 +25,11 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
         int s_x = col * 16;
         int s_y = row * 16;
         int pos = 0;
-        tiles t_res;
-        #pragma unroll
+        tiles_b t_res;
+#pragma unroll
         for (int i = 0; i < 16; ++i)
         {
-            int y = s_y + i; 
+            int y = s_y + i;
             u_int16_t c = 0x0;
             if (y >= num_v)
             {
@@ -50,7 +38,7 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
             }
             int of1 = ofs[y];
             int of2 = ofs[y + 1];
-            #pragma unroll
+#pragma unroll
             for (int j = 0; j < 16; ++j)
             {
                 int x = s_x + j;
@@ -85,7 +73,7 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
     }
 }
 
-__global__ void countTriangle(int tpr, tiles *matrix, double *square)
+__global__ void countTriangle(int tpr, tiles_b *matrix, double *square)
 {
     int tile_id = blockIdx.x;
     int row = threadIdx.y;
@@ -103,7 +91,7 @@ __global__ void countTriangle(int tpr, tiles *matrix, double *square)
     C[tid] = 0.0;
     temp_C[tid] = 0.0f;
     __syncthreads();
-    #pragma unroll
+#pragma unroll
     for (int k_tile = 0; k_tile < tpr; k_tile++)
     {
         int r1 = max(t_col, k_tile);
@@ -141,17 +129,16 @@ __global__ void countTriangle(int tpr, tiles *matrix, double *square)
     square[tile_offset + tid] = C[tid];
 }
 
-
-__global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, int num_v) 
+__global__ void cubeMatrix(int tpr, tiles_b *matrix, double *square, int *diag, int num_v)
 {
     int tile_id = blockIdx.x;
     int row = threadIdx.y;
     int col = threadIdx.x;
     int tid = row * 16 + col;
 
-    __shared__ half A[256]; 
-    __shared__ half B[256]; 
-    __shared__ double C[256]; 
+    __shared__ half A[256];
+    __shared__ half B[256];
+    __shared__ double C[256];
     __shared__ float temp_C[256];
 
     int t_col = triangular_col_from_id(tile_id);
@@ -160,7 +147,7 @@ __global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, in
     C[tid] = 0.0;
     temp_C[tid] = 0.0f;
     __syncthreads();
-    #pragma unroll
+#pragma unroll
     for (int k_tile = 0; k_tile < tpr; k_tile++)
     {
         int r1 = max(t_col, k_tile);
@@ -171,13 +158,12 @@ __global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, in
         int c2 = min(k_tile, t_row);
         int id2 = r2 * (r2 + 1) / 2 + c2;
 
-       
         double a = square[(int64_t)id1 * 256 + tid];
         u_int16_t b_row_val = matrix[id2].tile[row];
 
         A[tid] = __double2half(a);
         B[tid] = __int2half_ru((b_row_val >> (15 - col)) & 1);
-        
+
         __syncthreads();
         if (tid < 32)
         {
@@ -195,14 +181,14 @@ __global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, in
         C[tid] += (double)temp_C[tid];
         __syncthreads();
     }
-  
+
     if (t_col == t_row)
     {
-        if(row == col)
+        if (row == col)
         {
-            int global_diag_idx = t_col * 16 + row; 
-            
-            if (global_diag_idx < num_v) 
+            int global_diag_idx = t_col * 16 + row;
+
+            if (global_diag_idx < num_v)
             {
                 diag[global_diag_idx] = (int)C[tid];
             }
@@ -210,23 +196,22 @@ __global__ void cubeMatrix(int tpr, tiles *matrix, double *square, int *diag, in
     }
 }
 
-int64_t TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
+out_type TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
 {
-
     cudaSetDevice(0);
     int tiles_per_row = ((num_v + 15) >> 4);
     int64_t total_tiles = tiles_per_row * (tiles_per_row + 1) >> 1;
     n_edges = n_edges << 1;
     int padded_size_csr = ((n_edges + 15) >> 4) << 4;
     int *d_csr, *d_ofs;
-    tiles *d_tiles;
+    tiles_b *d_tiles;
     d_csr = nullptr;
     d_ofs = nullptr;
     CHECK(cudaMalloc(&d_csr, (padded_size_csr) * sizeof(int)));
     CHECK(cudaMalloc(&d_ofs, (num_v + 1) * sizeof(int)));
 
     int tiles_shifted = total_tiles;
-    CHECK(cudaMalloc(&d_tiles, (tiles_shifted) * sizeof(tiles)));
+    CHECK(cudaMalloc(&d_tiles, (tiles_shifted) * sizeof(tiles_b)));
     CHECK(cudaMemcpyAsync(d_csr, csr.data(), n_edges * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpyAsync(d_ofs, offsets.data(), (num_v + 1) * sizeof(int), cudaMemcpyHostToDevice));
 
@@ -242,27 +227,27 @@ int64_t TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> c
     dim3 grid_dimension(total_tiles);
     int *d_diag;
     CHECK(cudaMalloc(&d_diag, num_v * sizeof(int)));
-    CHECK(cudaMemset(d_diag, 0, num_v * sizeof(int))); 
+    CHECK(cudaMemset(d_diag, 0, num_v * sizeof(int)));
 
     CHECK(cudaGetLastError());
     countTriangle<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square);
     cudaDeviceSynchronize();
-    
+
     cubeMatrix<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square, d_diag, num_v);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError());
-    
-    std::vector<int>res(num_v);
-    
+
+    std::vector<int> res(num_v);
+
     cudaMemcpy(res.data(), d_diag, num_v * sizeof(int), cudaMemcpyDeviceToHost);
-    
+
     cudaFree(d_tiles);
     cudaFree(d_diag);
     cudaFree(d_square);
-    
+
     int64_t num = 0;
     for (auto i : res)
         num += (int64_t)(i);
-        
+
     return num / 6;
 }

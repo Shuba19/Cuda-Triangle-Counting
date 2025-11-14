@@ -11,7 +11,7 @@
 #include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
 #include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
 #include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
-#define REP_BENCHMARK 10
+#define REP_BENCHMARK 100
 
 struct timerEvent{
     cudaEvent_t t1,t2;

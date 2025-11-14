@@ -11,7 +11,6 @@ To run the code, use the following command in the terminal:
 ```
 ### Arguments
 - -i : Input file path (in a METIS style format, look at the  [manual](https://sites.cc.gatech.edu/dimacs10/data/manual.ps) for further information)
-- -t : To specify if the user wants to see the time taken to count the triangles
 - -d : Specify if the graph is directed, if there is no such flag, the graph is considered undirected
 - -h : To display help message
 - -help : To display help message
@@ -33,5 +32,17 @@ To run the tests, use the following command in the terminal:
 make run_test
 ```
 This will run the test suite to verify the correctness of the triangle counting implementations.
+
+  
+## Logic Behind Different Approaches
+### Edge Iterator
+In this approach, we iterate over each edge in the graph and for each edge (u, v), we find the common neighbors of u and v. The number of common neighbors gives the number of triangles that include the edge (u, v). This approach is efficient for sparse graphs.
+### Node Iterator
+In this approach, we iterate over each node in the graph and for each node u, we find all pairs of neighbors (v, w) of u. If there is an edge between v and w, then (u, v, w) forms a triangle. This approach is more efficient for dense graphs.
+### Tensor Core Matrix Multiplication
+![alt text](https://images.squarespace-cdn.com/content/v1/5a8dbb09bff2006c33266320/1538285346855-38J4GKOCJFYBZMMGB230/gemmtile%281%29.gif?format=1000w)
+Since tensor cores are limited to a maximum of 16x16 matrix multiplication, I tried to use tile logic, diving the CSR matrix into 16x16, eventually padding the matrix to fit into 16x16 tiles.
+Then, I used two techniques to count the triangles, one using bitwise operation, and another one using simple matrix multiplication.
+
 ## Authors
 - [Shuba19](https://github.com/Shuba19)

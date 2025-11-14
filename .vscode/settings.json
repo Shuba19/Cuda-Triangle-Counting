@@ -106,5 +106,6 @@
         "__std_stream": "cpp",
         "coroutine": "cpp",
         "__hash": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }

@@ -78,7 +78,6 @@ bool GraphFR::GraphReader(std::ifstream &GraphInput, bool e_weight, bool v_weigh
 bool GraphFR::ReadFile()
 {
   std::ifstream GraphInput(this->args.input_file);
-  std::cout << "Reading file: " << this->args.input_file << std::endl;
   if (!GraphInput.is_open())
   {
     std::cerr << "Error Opening File, check if the file exists or/and if the name is correct." << std::endl;
@@ -145,7 +144,8 @@ void GraphFR::printVerboseGraphInfo()
   std::cout << "CSR Size: " << this->csr.size() << std::endl;
   std::cout << "Offsets Size: " << this->offsets.size() << std::endl;
   std::cout << "Mode: " << (TriMode)this->args.mode << std::endl;
-  if(this->args.benchmark){
+  if (this->args.benchmark)
+  {
     std::cout << "Benchmarking mode enabled with " << REP_BENCHMARK << " repetitions." << std::endl;
     std::cout << "Average time per operation: " << this->timer.time / REP_BENCHMARK << " ms" << std::endl;
   }
@@ -156,7 +156,8 @@ void GraphFR::printVerboseGraphInfo()
 
 int GraphFR::CalculateTriangles()
 {
-  if(this->args.benchmark){
+  if (this->args.benchmark)
+  {
     benchmark();
     return 0;
   }
@@ -172,6 +173,9 @@ int GraphFR::CalculateTriangles()
     break;
   case 2:
     triangle_count = TTC(this->num_v, this->num_edge, this->offsets, this->csr);
+    break;
+  case 3:
+    TTC_v2(this->num_v, this->num_edge, this->offsets, this->csr);
     break;
   default:
     std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
@@ -200,6 +204,10 @@ void GraphFR::benchmark()
   case 2:
     for (int i = 0; i < REP_BENCHMARK; i++)
       TTC(this->num_v, this->num_edge, this->offsets, this->csr);
+    break;
+  case 3:
+    for (int i = 0; i < REP_BENCHMARK; i++)
+     TTC_v2(this->num_v, this->num_edge, this->offsets, this->csr);
     break;
   default:
     std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;

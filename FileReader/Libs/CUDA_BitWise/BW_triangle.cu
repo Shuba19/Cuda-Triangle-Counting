@@ -12,11 +12,6 @@
     }
 namespace BWISETC
 {
-    struct tiles
-    {
-        u_int16_t tile[16];
-    };
-
     __device__ int triangular_col_from_id(int id)
     {
         int col = 0;
@@ -83,7 +78,7 @@ namespace BWISETC
         }
     }
 
-    int64_t BWTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
+    out_type BWTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> csr)
     {
 
         cudaSetDevice(0);

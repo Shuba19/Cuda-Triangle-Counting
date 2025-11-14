@@ -5,7 +5,7 @@
     "type": "cuda-gdb",
     "request": "launch",
     "program": "${workspaceFolder}/out",
-    "args": ["${workspaceFolder}/test/matrix6.graph"]
+    "args": ["-i","${workspaceFolder}/test/sample.graph","-v" ,"-mode", "3"]
   }
   ]
 }

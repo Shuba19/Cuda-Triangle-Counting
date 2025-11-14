@@ -1,0 +1,27 @@
+#ifndef COMMON_METHODS_H
+#define COMMON_METHODS_H
+#include <iostream>
+#include <vector>
+#include <numeric>
+#include <algorithm>
+#include <cmath>
+#include <stdio.h>
+#include <cuda_runtime.h>
+#include <mma.h>
+#include <cuda_fp16.h>
+
+struct tiles
+{
+    double tile[256];
+};
+
+struct tiles_b
+{
+    u_int16_t tile[16];
+};
+typedef long long out_type;
+__device__ int searchSourceNode(const int *ofs, int n, int id);
+__device__ bool bin_search(int goal, int *v, int len);
+__device__ int triangular_col_from_id(int id);
+
+#endif
