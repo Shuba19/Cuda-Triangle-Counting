@@ -4,5 +4,5 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-int64_t SearchTriangle(int num_v,int n_edges, std::vector<int>& csr_size, std::vector<int>& csr, bool undirect);
+int64_t SearchTriangle_Node_Iterator(int num_v,int n_edges, std::vector<int>& csr_size, std::vector<int>& csr, bool undirect);
 #endif

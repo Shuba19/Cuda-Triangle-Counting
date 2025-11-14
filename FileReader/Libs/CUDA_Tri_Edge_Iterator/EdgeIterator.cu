@@ -123,7 +123,7 @@ __global__ void sum_results(int num_e, int *d_res, int *d_sum)
     if (tid == 0)
         atomicAdd(d_sum, s_data[0]);
 }
-int64_t SearchTriangle_Edge(int num_v, int n_edges, std::vector<int> &offsets, std::vector<int> &csr, bool undirected)
+int64_t SearchTriangle_Edge_Iterator(int num_v, int n_edges, std::vector<int> &offsets, std::vector<int> &csr, bool undirected)
 {
     cudaSetDevice(0);
     n_edges = n_edges << 1;

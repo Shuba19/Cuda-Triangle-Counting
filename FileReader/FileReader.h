@@ -11,7 +11,7 @@
 #include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
 #include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
 #include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
-
+#define REP_BENCHMARK 10
 
 struct timerEvent{
     cudaEvent_t t1,t2;
@@ -23,13 +23,13 @@ class GraphFR{
     std::vector<int> csr, offsets;
     int numArgs;
     CommandArgs args;
-    std::string fileName;
     timerEvent timer;
     void StartTimer();
     void StopTimer();
     bool GraphReader(std::ifstream& GraphInput, bool e_weight, bool v_weight, int n_skip);
     bool IsMetisComment(const std::string& str);
-
+    void printVerboseGraphInfo();
+    void benchmark();
     public:
     GraphFR(const CommandArgs& args);
     ~GraphFR();

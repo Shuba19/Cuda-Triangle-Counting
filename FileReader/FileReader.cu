@@ -9,11 +9,18 @@
  * - ncon : number of weight associated to vertices
  /*******************************/
 
+enum TriMode
+{
+  EDGE_ITERATOR = 0,
+  NODE_ITERATOR = 1,
+  TENSOR_CALCULATION = 2
+};
+
 GraphFR::~GraphFR()
 {
 }
 
-GraphFR::GraphFR(const CommandArgs &args) : fileName(fileName), num_v(0), num_edge(0)
+GraphFR::GraphFR(const CommandArgs &args) : args(args)
 {
   cudaEventCreate(&this->timer.t1);
   cudaEventCreate(&this->timer.t2);
@@ -71,10 +78,11 @@ bool GraphFR::GraphReader(std::ifstream &GraphInput, bool e_weight, bool v_weigh
 bool GraphFR::ReadFile()
 {
   std::ifstream GraphInput(this->args.input_file);
+  std::cout << "Reading file: " << this->args.input_file << std::endl;
   if (!GraphInput.is_open())
   {
     std::cerr << "Error Opening File, check if the file exists or/and if the name is correct." << std::endl;
-    return false;
+    exit(EXIT_FAILURE);
   }
 
   std::string line;
@@ -117,31 +125,87 @@ void GraphFR::StopTimer()
   cudaEventElapsedTime(&this->timer.time, this->timer.t1, this->timer.t2);
 }
 
+void GraphFR::printVerboseGraphInfo()
+{
+  if (!this->args.verbose)
+    return;
+  double num_possible_edges = static_cast<double>(this->num_v) * (this->num_v - 1);
+  double density = static_cast<double>(this->num_edge) / num_possible_edges;
+
+  if (this->args.undirect)
+  {
+    density *= 2.0;
+  }
+
+  std::cout << "----------------------------------" << std::endl;
+  std::cout << "Graph Information:" << std::endl;
+  std::cout << "Number of vertices: " << this->num_v << std::endl;
+  std::cout << "Number of edges: " << this->num_edge << std::endl;
+  std::cout << "Graph Density: " << (density * 100.0) << "%" << std::endl;
+  std::cout << "CSR Size: " << this->csr.size() << std::endl;
+  std::cout << "Offsets Size: " << this->offsets.size() << std::endl;
+  std::cout << "Mode: " << (TriMode)this->args.mode << std::endl;
+  if(this->args.benchmark){
+    std::cout << "Benchmarking mode enabled with " << REP_BENCHMARK << " repetitions." << std::endl;
+    std::cout << "Average time per operation: " << this->timer.time / REP_BENCHMARK << " ms" << std::endl;
+  }
+  else
+    std::cout << "Time taken for last operation: " << this->timer.time << " ms" << std::endl;
+  std::cout << "----------------------------------" << std::endl;
+}
+
 int GraphFR::CalculateTriangles()
 {
-  int triangle_count = 0;
-  switch (this->args.mode[0])
-  {
-    case 'n':
-    {
-      SearchTriangle(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
-      break;
-    }
-    case 'e':
-    {
-      SearchTriangle_Edge(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
-      break;
-    }
-    case 't':
-    {
-      TTC(this->num_v, this->num_edge, this->offsets, this->csr);
-      break;
-    }
-    default:
-      std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
-      return -1;
+  if(this->args.benchmark){
+    benchmark();
+    return 0;
   }
+  int triangle_count = 0;
   StartTimer();
+  switch (this->args.mode)
+  {
+  case 0:
+    triangle_count = SearchTriangle_Edge_Iterator(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+    break;
+  case 1:
+    triangle_count = SearchTriangle_Node_Iterator(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+    break;
+  case 2:
+    triangle_count = TTC(this->num_v, this->num_edge, this->offsets, this->csr);
+    break;
+  default:
+    std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
+    return -1;
+  }
   StopTimer();
+  printVerboseGraphInfo();
   return triangle_count;
+}
+
+void GraphFR::benchmark()
+{
+  std::cout << "------- STARTING BENCHMARK -------" << std::endl;
+  StartTimer();
+
+  switch (this->args.mode)
+  {
+  case 0:
+    for (int i = 0; i < REP_BENCHMARK; i++)
+      SearchTriangle_Edge_Iterator(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+    break;
+  case 1:
+    for (int i = 0; i < REP_BENCHMARK; i++)
+      SearchTriangle_Node_Iterator(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
+    break;
+  case 2:
+    for (int i = 0; i < REP_BENCHMARK; i++)
+      TTC(this->num_v, this->num_edge, this->offsets, this->csr);
+    break;
+  default:
+    std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
+    return;
+  }
+  StopTimer();
+  printVerboseGraphInfo();
+  std::cout << "------- END OF BENCHMARK ---------" << std::endl;
 }

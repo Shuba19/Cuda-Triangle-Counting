@@ -4,7 +4,8 @@
 #define FILEREADER_COMMAND_ARGS_HPP
 
 struct CommandArgs {
-    std::string input_file,mode;
+    std::string input_file;
+    int mode = -1;
     bool valid = true;
     bool help = false;
     bool undirect = true;

@@ -8,7 +8,6 @@ void print_help_message()
               << "  -d                Use directed graph (default is undirected)\n"
               << "  -b                Enable benchmarking mode\n"
               << "  -h, -help        Display this help message\n"
-              << "  -t                Enable timer\n"
               << "  -mode             Set the mode ()\n"
               << "  -v          Enable verbose output\n"
               << std::endl;
@@ -21,7 +20,7 @@ CommandArgs parse_command_args(int argc, char** argv)
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-i" && i + 1 < argc) {
-            args.input_file = argv[++i];   
+            args.input_file = argv[++i];
         } else if (arg == "-d") {
             args.undirect = false; 
         }
@@ -29,14 +28,12 @@ CommandArgs parse_command_args(int argc, char** argv)
             args.benchmark = true; 
         }
         else if (arg == "-h" || arg == "-help") {
-            args.help = true; 
-        }
-        else if (arg == "-t") {
-            args.timer = true; 
+            print_help_message();
+            exit(0);
         }
         else if (arg == "-mode") {
             args.mode_set = true; 
-            args.mode = argv[++i];
+            args.mode = std::stoi(argv[++i]);
         }
         else if (arg == "-v") {
             args.verbose = true; 

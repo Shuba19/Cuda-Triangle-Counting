@@ -4,5 +4,5 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-int64_t SearchTriangle_Edge(int num_v,int n_edges, std::vector<int>& offsets, std::vector<int>& csr, bool undirect);
+int64_t SearchTriangle_Edge_Iterator(int num_v,int n_edges, std::vector<int>& offsets, std::vector<int>& csr, bool undirect);
 #endif
