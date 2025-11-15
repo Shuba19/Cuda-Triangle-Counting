@@ -40,9 +40,11 @@ In this approach, we iterate over each edge in the graph and for each edge (u, v
 ### Node Iterator
 In this approach, we iterate over each node in the graph and for each node u, we find all pairs of neighbors (v, w) of u. If there is an edge between v and w, then (u, v, w) forms a triangle. This approach is more efficient for dense graphs.
 ### Tensor Core Matrix Multiplication
-![alt text](https://images.squarespace-cdn.com/content/v1/5a8dbb09bff2006c33266320/1538285346855-38J4GKOCJFYBZMMGB230/gemmtile%281%29.gif?format=1000w)
 Since tensor cores are limited to a maximum of 16x16 matrix multiplication, I tried to use tile logic, diving the CSR matrix into 16x16, eventually padding the matrix to fit into 16x16 tiles.
-Then, I used two techniques to count the triangles, one using bitwise operation, and another one using simple matrix multiplication.
+Then, I multiplied the tiles using tensor cores, and finally summed the resulting matrix's diagonal to get the number of triangles.
+![tiles multiplication](https://images.squarespace-cdn.com/content/v1/5a8dbb09bff2006c33266320/1538285346855-38J4GKOCJFYBZMMGB230/gemmtile%281%29.gif?format=1000w)
+### Graph Partitioning
+WIP
 
 ## Authors
 - [Shuba19](https://github.com/Shuba19)
