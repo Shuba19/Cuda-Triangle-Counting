@@ -1,7 +1,4 @@
-#include "TensorCalculation.h"
-#include <algorithm> // <<< FIX: Needed for std::max and std::min (or use CUDA's max/min)
-#include <cmath>     // <<< FIX: Included for sqrt/floor, though likely in your .h
-
+#include "../CommonMethods/common_methods.h"
 using namespace nvcuda;
 #define CHECK(call)                                                         \
     {                                                                       \

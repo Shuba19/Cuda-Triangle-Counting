@@ -1,5 +1,4 @@
-#include "EdgeIterator.h"
-
+#include "../CommonMethods/common_methods.h"
 #define CHECK(call)                                                         \
     {                                                                       \
         const cudaError_t error = call;                                     \

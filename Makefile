@@ -3,7 +3,6 @@ SOURCE = Main.cu
 LIB1 = ./FileReader/Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.cu
 LIB2 = ./FileReader/Libs/CUDA_Tri_Node_Iterator/NodeIterator.cu
 LIB3 = ./FileReader/Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.cu
-LIB4 = ./FileReader/Libs/CUDA_BitWise/BW_triangle.cu
 FILER = ./FileReader/FileReader.cu ./FileReader/command_args.cpp
 COMMONMETHODS = ./FileReader/Libs/CommonMethods/common_methods.cu
 PYTHON = python3 test/FILES/gemini.py 

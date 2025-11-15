@@ -8,11 +8,9 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
-#include "Libs/CUDA_Tri_Tensor_Multi/TensorCalculation.h"
-#include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
-#include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
+#include "Libs/CommonMethods/common_methods.h"
 #define REP_BENCHMARK 100
-typedef int64_t out_type;
+
 struct timerEvent{
     cudaEvent_t t1,t2;
     float time;
