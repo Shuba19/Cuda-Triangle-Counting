@@ -154,14 +154,14 @@ void GraphFR::printVerboseGraphInfo()
   std::cout << "----------------------------------" << std::endl;
 }
 
-int GraphFR::CalculateTriangles()
+out_type GraphFR::CalculateTriangles()
 {
   if (this->args.benchmark)
   {
     benchmark();
     return 0;
   }
-  int triangle_count = 0;
+  out_type triangle_count = 0;
   StartTimer();
   switch (this->args.mode)
   {
@@ -173,9 +173,6 @@ int GraphFR::CalculateTriangles()
     break;
   case 2:
     triangle_count = TTC(this->num_v, this->num_edge, this->offsets, this->csr);
-    break;
-  case 3:
-    TTC_v2(this->num_v, this->num_edge, this->offsets, this->csr);
     break;
   default:
     std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;
@@ -189,6 +186,7 @@ int GraphFR::CalculateTriangles()
 void GraphFR::benchmark()
 {
   std::cout << "------- STARTING BENCHMARK -------" << std::endl;
+  SearchTriangle_Edge_Iterator(this->num_v, this->num_edge, this->offsets, this->csr, this->args.undirect);
   StartTimer();
 
   switch (this->args.mode)
@@ -205,9 +203,6 @@ void GraphFR::benchmark()
     for (int i = 0; i < REP_BENCHMARK; i++)
       TTC(this->num_v, this->num_edge, this->offsets, this->csr);
     break;
-  case 3:
-    for (int i = 0; i < REP_BENCHMARK; i++)
-     TTC_v2(this->num_v, this->num_edge, this->offsets, this->csr);
     break;
   default:
     std::cerr << "Invalid mode selected. Please choose 'n' for Node Iterator, 'e' for Edge Iterator, or 't' for Tensor Calculation." << std::endl;

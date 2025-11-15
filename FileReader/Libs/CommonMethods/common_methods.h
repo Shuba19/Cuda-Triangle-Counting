@@ -19,7 +19,7 @@ struct tiles_b
 {
     u_int16_t tile[16];
 };
-typedef long long out_type;
+typedef int64_t out_type;
 __device__ int searchSourceNode(const int *ofs, int n, int id);
 __device__ bool bin_search(int goal, int *v, int len);
 __device__ int triangular_col_from_id(int id);

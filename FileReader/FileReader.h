@@ -12,7 +12,7 @@
 #include "Libs/CUDA_Tri_Node_Iterator/NodeIterator.h"
 #include "Libs/CUDA_Tri_Edge_Iterator/EdgeIterator.h"
 #define REP_BENCHMARK 100
-
+typedef int64_t out_type;
 struct timerEvent{
     cudaEvent_t t1,t2;
     float time;
@@ -34,7 +34,7 @@ class GraphFR{
     GraphFR(const CommandArgs& args);
     ~GraphFR();
     bool ReadFile();
-    int CalculateTriangles();
+    out_type CalculateTriangles();
 };
 
 #endif

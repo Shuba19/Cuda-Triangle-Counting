@@ -20,7 +20,7 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id < total_t)
     {
-        int col = floor((sqrt(8.0 * id + 1) - 1) / 2);
+        int col = triangular_col_from_id(id);
         int row = id - col * (col + 1) / 2;
         int s_x = col * 16;
         int s_y = row * 16;
@@ -129,7 +129,7 @@ __global__ void countTriangle(int tpr, tiles_b *matrix, double *square)
     square[tile_offset + tid] = C[tid];
 }
 
-__global__ void cubeMatrix(int tpr, tiles_b *matrix, double *square, int *diag, int num_v)
+__global__ void cubeMatrix(int tpr, tiles_b *matrix, double *square, int64_t *diag, int num_v)
 {
     int tile_id = blockIdx.x;
     int row = threadIdx.y;
@@ -225,9 +225,9 @@ out_type TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> 
     CHECK(cudaMalloc(&d_square, (n_v) * sizeof(double)));
     dim3 blocks_dimension(16, 16);
     dim3 grid_dimension(total_tiles);
-    int *d_diag;
-    CHECK(cudaMalloc(&d_diag, num_v * sizeof(int)));
-    CHECK(cudaMemset(d_diag, 0, num_v * sizeof(int)));
+    int64_t *d_diag;
+    CHECK(cudaMalloc(&d_diag, num_v * sizeof(int64_t)));
+    CHECK(cudaMemset(d_diag, 0, num_v * sizeof(int64_t)));
 
     CHECK(cudaGetLastError());
     countTriangle<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square);
@@ -235,11 +235,10 @@ out_type TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> 
 
     cubeMatrix<<<total_tiles, blocks_dimension>>>(tiles_per_row, d_tiles, d_square, d_diag, num_v);
     cudaDeviceSynchronize();
-    CHECK(cudaGetLastError());
 
-    std::vector<int> res(num_v);
+    std::vector<int64_t> res(num_v);
 
-    cudaMemcpy(res.data(), d_diag, num_v * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(res.data(), d_diag, num_v * sizeof(int64_t), cudaMemcpyDeviceToHost);
 
     cudaFree(d_tiles);
     cudaFree(d_diag);

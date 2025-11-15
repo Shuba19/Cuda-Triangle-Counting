@@ -8,8 +8,9 @@ void print_help_message()
               << "  -d                Use directed graph (default is undirected)\n"
               << "  -b                Enable benchmarking mode\n"
               << "  -h, -help        Display this help message\n"
-              << "  -mode             Set the mode ()\n"
+              << "  -mode             Set the mode (0:Edge Iterator, 1: Node Iterator, 2: Tensor )\n"
               << "  -v          Enable verbose output\n"
+              << "  Example:   ./out -i g1.graph -mode 2 -v -b"
               << std::endl;
 }
 
