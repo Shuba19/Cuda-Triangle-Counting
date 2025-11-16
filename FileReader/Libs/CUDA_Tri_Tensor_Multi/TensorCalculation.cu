@@ -11,7 +11,6 @@ using namespace nvcuda;
         }                                                                   \
     }
 
-/**/
 __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *ofs, tiles_b *matrix)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -70,6 +69,63 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
     }
 }
 
+__global__ void tiles_builder_v2(int tpr, int num_v, int total_t, int *csr, int *ofs, tiles_b *matrix)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id < total_t)
+    {
+        int col = triangular_col_from_id(id);
+        int row = id - col * (col + 1) / 2;
+        int s_x = col * 16;
+        int s_y = row * 16;
+        int pos = 0;
+        tiles_b t_res;
+#pragma unroll
+        for (int i = 0; i < 16; ++i)
+        {
+            int y = s_y + i;
+            u_int16_t c = 0x0;
+            if (y >= num_v)
+            {
+                t_res.tile[pos++] = c;
+                continue;
+            }
+            int of1 = ofs[y];
+            int of2 = ofs[y + 1];
+#pragma unroll
+            for (int j = 0; j < 16; ++j)
+            {
+                int x = s_x + j;
+                int t_s = 0;
+                if (x < num_v)
+                {
+                    int low = of1;
+                    int high = of2 - 1;
+                    while (low <= high)
+                    {
+                        int mid = low + ((high - low) >> 1);
+                        if (csr[mid] == x)
+                        {
+                            t_s = 1;
+                            break;
+                        }
+                        else if (csr[mid] < x)
+                        {
+                            low = mid + 1;
+                        }
+                        else
+                        {
+                            high = mid - 1;
+                        }
+                    }
+                }
+                c = (c << 1) | (u_int16_t)t_s;
+            }
+            t_res.tile[pos++] = c;
+        }
+        matrix[id] = t_res;
+    }
+}
 __global__ void countTriangle(int tpr, tiles_b *matrix, double *square)
 {
     int tile_id = blockIdx.x;
