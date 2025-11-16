@@ -9,13 +9,8 @@
  * - ncon : number of weight associated to vertices
  /*******************************/
 
-enum TriMode
-{
-  EDGE_ITERATOR = 0,
-  NODE_ITERATOR = 1,
-  TENSOR_CALCULATION = 2
-};
 
+#define REP_BENCHMARK 100
 GraphFR::~GraphFR()
 {
 }
@@ -151,7 +146,7 @@ void GraphFR::printVerboseGraphInfo()
   }
   else
     std::cout << "Time taken for last operation: " << this->timer.time << " ms" << std::endl;
-  std::cout << "----------------------------------" << std::endl;
+  std::cout << "----------------------------------" << std::endl; 
 }
 
 out_type GraphFR::CalculateTriangles()

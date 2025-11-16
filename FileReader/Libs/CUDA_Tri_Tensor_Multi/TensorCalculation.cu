@@ -21,12 +21,17 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
         int s_x = col * 16;
         int s_y = row * 16;
         int pos = 0;
-        int i = threadIdx.y;
         tiles_b t_res;
-        int y = s_y + i;
-        u_int16_t c = 0x0;
-        if (y < num_v)
+#pragma unroll
+        for (int i = 0; i < 16; ++i)
         {
+            int y = s_y + i;
+            u_int16_t c = 0x0;
+            if (y >= num_v)
+            {
+                t_res.tile[pos++] = c;
+                continue;
+            }
             int of1 = ofs[y];
             int of2 = ofs[y + 1];
 #pragma unroll
@@ -58,8 +63,9 @@ __global__ void tiles_builder(int tpr, int num_v, int total_t, int *csr, int *of
                 }
                 c = (c << 1) | (u_int16_t)t_s;
             }
+            t_res.tile[pos++] = c;
         }
-        matrix[id].tile[i] = c;
+        matrix[id] = t_res;
     }
 }
 
@@ -204,10 +210,9 @@ out_type TTC(int num_v, int n_edges, std::vector<int> offsets, std::vector<int> 
     CHECK(cudaMalloc(&d_tiles, (tiles_shifted) * sizeof(tiles_b)));
     CHECK(cudaMemcpyAsync(d_csr, csr.data(), n_edges * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpyAsync(d_ofs, offsets.data(), (num_v + 1) * sizeof(int), cudaMemcpyHostToDevice));
-    int th = 64;
-    dim3 tb_dim_bloc(th,16,1);
-    dim3 tb_dim_grid((total_tiles + th - 1) / th);
-    tiles_builder<<<tb_dim_grid, tb_dim_bloc>>>(tiles_per_row, num_v, total_tiles, d_csr, d_ofs, d_tiles);
+
+    dim3 tb_dim_grid((total_tiles + 127) / 128);
+    tiles_builder<<<tb_dim_grid, 128>>>(tiles_per_row, num_v, total_tiles, d_csr, d_ofs, d_tiles);
     cudaDeviceSynchronize();
     cudaFree(d_csr);
     cudaFree(d_ofs);

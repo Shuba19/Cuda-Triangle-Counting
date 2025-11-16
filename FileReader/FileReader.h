@@ -9,8 +9,13 @@
 #include <vector>
 #include <algorithm>
 #include "Libs/CommonMethods/common_methods.h"
-#define REP_BENCHMARK 100
 
+enum TriMode
+{
+  EDGE_ITERATOR = 0,
+  NODE_ITERATOR = 1,
+  TENSOR_CALCULATION = 2
+};
 struct timerEvent{
     cudaEvent_t t1,t2;
     float time;

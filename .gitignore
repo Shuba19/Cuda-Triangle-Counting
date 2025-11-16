@@ -1,6 +1,2 @@
-/Comparison
-/Report
-/test
-out
-Miniconda3-latest-Linux-x86_64.sh
+out*
 .vscode/
