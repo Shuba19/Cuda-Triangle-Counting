@@ -2,11 +2,12 @@
 #include "../../../Libs/ChronoCuda.h"
 #include "../../../Libs/CudaUtilities.h"
 #include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
 
 #define TESTING false
 #define GRAPH_DEVICE true
 #define BLOCK_SIZE 128
-#define COOP_SIZE 32
+#define COOP_SIZE 8
 #define WORK_LOAD_HEAVY 30000
 #define LIGHT_MODE true
 #define ONLY_BINARY false
@@ -184,11 +185,7 @@ __global__ void edge_search_tri(int num_v, int64_t num_e, const int *__restrict_
             }
         }
     }
-    tot_operations += __shfl_down_sync(0xffffffff, tot_operations, 16);
-    tot_operations += __shfl_down_sync(0xffffffff, tot_operations, 8);
-    tot_operations += __shfl_down_sync(0xffffffff, tot_operations, 4);
-    tot_operations += __shfl_down_sync(0xffffffff, tot_operations, 2);
-    tot_operations += __shfl_down_sync(0xffffffff, tot_operations, 1);
+    tot_operations = cg::reduce(warp, tot_operations, cg::plus<int>());
     is_heavy = (tot_operations > WORK_LOAD_HEAVY);
 #if LIGHT_MODE
     // se light, svolge lavoro
